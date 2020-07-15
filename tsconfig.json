@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "module": "ES2015",
+    "moduleResolution": "Node",
+    "noImplicitAny": true,
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "paths": {
+      "src/*": ["src/*"],
+      "root/*": ["./*"]
+    },
+    "baseUrl": ".",
+    "outDir": "./lib",
+    "types": [
+      "jest"
+    ],
+    "pretty": true,
+    "target": "ES6",
+    "declaration": true,
+    "allowJs": true
+  },
+  "lib": [
+    "ES6"
+  ],
+  "files": [
+    "./index.ts"
+  ],
+  "include": ["src/**/*", "examples/**/*"]
+}
