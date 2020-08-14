@@ -1,10 +1,11 @@
 import fat from 'src/index.ts'
-
-fat
+setTimeout(() => {
+  fat
   .select('div')
-  .move(100, 100)
-  .duration(500)
-  .then()
-  .move(200, 200)
-  .duration(300)
+  .move(100, 0)
+  .duration(1000)
+  // .then()
+  // .move(200, 200)
+  // .duration(300)
   .run()
+}, 1000);

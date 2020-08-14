@@ -3,6 +3,9 @@ export interface IListItem<T> {
   value: TListItemValue<T>
 }
 type TListItemValue<T> = T extends { value: infer V } ? V : any
+/**
+ *  二维数组结构
+ */
 export default class List<T> {
   private _value: IListItem<T>[]
   public get length(): number {

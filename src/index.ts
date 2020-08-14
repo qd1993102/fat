@@ -46,17 +46,31 @@ class Fat {
     x: 0,
     y: 0,
     z: 0,
-    opacity: 0
+    opacity: 1
   }
-  private get _transAttr() : ITransAttr {
-    return this._$transAttr;
-  }
-  
-  private set _transAttr(v : ITransAttr) {
-    this._el.style.transform = `translate(${v.x || 0}px, ${v.y || 0}px, ${v.z || 0}px)`
-    this._el.style.opacity = String(v.opacity || 0)
-    this._$transAttr = v;
-  }
+
+  // private get _transAttr() : ITransAttr {
+  //   return this._$transAttr;
+  // }
+
+  // private set _transAttr(v : ITransAttr) {
+  //   this._el.style.transform = `translate(${v.x || 0}px, ${v.y || 0}px, ${v.z || 0}px)`
+  //   this._el.style.opacity = String(v.opacity || 0)
+  //   this._$transAttr = v;
+  // }
+  private _transAttr = new Proxy(this._$transAttr, {
+    get: (obj, prop, value) => {
+      return this._$transAttr[prop as keyof ITransAttr]
+    },
+    set: (obj, prop, value) => {
+      this._$transAttr[prop as keyof ITransAttr] = value
+      const attr = this._$transAttr
+      const transform = `translate3d(${attr.x.toFixed(2) || 0}px, ${attr.y.toFixed(2) || 0}px, ${attr.z.toFixed(2) || 0}px)`;
+      this._el.style.transform = transform;
+      this._el.style.opacity = String(attr.opacity || 1);
+      return true
+    }
+  })
 
   constructor (opts: IFatOptions) {
     this._el = opts.el
@@ -80,15 +94,15 @@ class Fat {
     return this
   }
   _getMoveFn(x: number, y: number, duration: number) {
-    const xGap = Number(((x - this._transAttr.x) / duration).toFixed(2))
-    const yGap = Number(((y - this._transAttr.y) / duration).toFixed(2))
+    const xGap = Number((16 * (x - this._transAttr.x) / duration))
+    const yGap = Number((16 * (y - this._transAttr.y) / duration).toFixed(2))
     return () => {
-      const _x = Number(this._transAttr.x) + xGap
-      const _y = Number(this._transAttr.y) + yGap
+      const _x = Number((this._transAttr.x + xGap).toFixed(2))
+      const _y = Number((this._transAttr.y + yGap).toFixed(2))
       this._transAttr.x = _x
       this._transAttr.y = _y;
       logger.debug('move:', this._transAttr.x, this._transAttr.y);
-      return _y >= x && _y >= y
+      return _x >= x && _y >= y
     }
   }
 

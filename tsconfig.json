@@ -2,13 +2,18 @@
   "compilerOptions": {
     "module": "ES2015",
     "moduleResolution": "Node",
+    "experimentalDecorators": true,
     "noImplicitAny": true,
     "removeComments": true,
     "preserveConstEnums": true,
     "sourceMap": true,
     "paths": {
-      "src/*": ["src/*"],
-      "root/*": ["./*"]
+      "src/*": [
+        "src/*"
+      ],
+      "root/*": [
+        "./*"
+      ]
     },
     "baseUrl": ".",
     "outDir": "./lib",
@@ -21,10 +26,14 @@
     "allowJs": true
   },
   "lib": [
-    "ES6"
+    "ES6",
+    "dom"
   ],
   "files": [
     "./index.ts"
   ],
-  "include": ["src/**/*", "examples/**/*"]
+  "include": [
+    "src/**/*",
+    "examples/**/*"
+  ]
 }

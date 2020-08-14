@@ -71,7 +71,7 @@ export class Task {
     if (taskFuncListState === Number(`0x${'1'.repeat(len)}`)) { 
       // 执行结束
       taskQueueItem.value.state = TASK_STATE_ENUM.stop // 记录状态
-      if (this._currentTaskQueueIndex >= _taskQueueLen) {
+      if (this._currentTaskQueueIndex >= (_taskQueueLen - 1)) {
         // taskQueue已经执行完毕，task完成
         this._state = TASK_STATE_ENUM.stop
         // cancelAnimationFrame(animId)
