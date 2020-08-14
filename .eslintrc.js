@@ -4,7 +4,8 @@ module.exports = {
     es2020: true
   },
   extends: [
-    'standard'
+    // 'standard'
+    'plugin:@typescript-eslint/recommended'
   ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
@@ -15,5 +16,6 @@ module.exports = {
     '@typescript-eslint'
   ],
   rules: {
+
   }
 }

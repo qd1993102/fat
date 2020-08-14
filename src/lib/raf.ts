@@ -1,0 +1,2 @@
+export const requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame // todo
+export const cancelAnimationFrame = window.cancelAnimationFrame || window.webkitCancelAnimationFrame // todo

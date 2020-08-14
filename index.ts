@@ -1,2 +1,2 @@
-import Mod from 'src/index';
-export default Mod;
+import Mod from 'src/index'
+export default Mod

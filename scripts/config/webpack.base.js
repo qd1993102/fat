@@ -1,5 +1,5 @@
-const path = require('path');
-const CWD = process.cwd();
+const path = require('path')
+const CWD = process.cwd()
 
 module.exports = {
   // mode: "development", // "production" | "development" | "none"
@@ -15,7 +15,7 @@ module.exports = {
     // path: path.resolve(CWD, "dist"), // string
     // the target directory for all output files
     // must be an absolute path (use the Node.js path module)
-    filename: "[name].js", // string
+    filename: '[name].js' // string
     // the filename template for entry chunks
     // publicPath: "/assets/", // string
     // the url to the output directory resolved relative to the HTML page
@@ -35,9 +35,9 @@ module.exports = {
         loader: 'ts-loader',
         options: {
           onlyCompileBundledFiles: true
-        },
+        }
         // options for the loader
-      },
+      }
       // { oneOf: [ / rules / ] },
       // only use one of these nested rules
       // { rules: [ / rules / ] },
@@ -49,7 +49,7 @@ module.exports = {
       // matches if any condition is matched (default for arrays)
       // { resource: { not: / condition / } }
       // matches if the condition is not matched
-    ],
+    ]
     /* Advanced module configuration (click to show) */
   },
   resolve: {
@@ -59,11 +59,11 @@ module.exports = {
       path.join(CWD, './node_modules')
     ],
     // directories where to look for modules
-    extensions: [".ts", ".js", ".json", ".jsx", ".css"],
+    extensions: ['.ts', '.js', '.json', '.jsx', '.css'],
     // extensions that are used
     alias: {
-      "src": path.join(CWD, './src'),
-      "root": path.join(CWD, './'),
+      src: path.join(CWD, './src'),
+      root: path.join(CWD, './')
       // a list of module name aliases
       // "module": "new-module",
       // alias "module" -> "new-module" and "module/path/file" -> "new-module/path/file"
@@ -72,7 +72,7 @@ module.exports = {
       // "module": path.resolve(__dirname, "app/third/module.js"),
       // alias "module" -> "./app/third/module.js" and "module/file" results in error
       // modules aliases are imported relative to the current context
-    },
+    }
     /* Alternative alias syntax (click to show) */
     /* Advanced resolve configuration (click to show) */
   },
@@ -85,14 +85,14 @@ module.exports = {
   //     return assetFilename.endsWith('.css') || assetFilename.endsWith('.js');
   //   }
   // },
-  devtool: "source-map", // enum
+  devtool: 'source-map', // enum
   // enhance debugging by adding meta info for the browser devtools
   // source-map most detailed at the expense of build speed.
   context: CWD, // string (absolute path!)
   // the home directory for webpack
   // the entry and module.rules.loader option
   //   is resolved relative to this directory
-  target: "web", // enum
+  target: 'web', // enum
   // the environment in which the bundle should run
   // changes chunk loading behavior and available modules
   // externals: ["react", /^@angular/],
@@ -101,5 +101,5 @@ module.exports = {
   // lets you precisely control what bundle information gets displayed
   plugins: [
     // ...
-  ],
+  ]
 }
