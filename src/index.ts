@@ -5,7 +5,7 @@ import { _$ } from './lib/dom'
 import { Task } from './task/index'
 import { IJsonObject } from './@interface/common.i'
 import logger from './lib/logger'
-import { guid } from './lib/utils'
+import { guid, deepClone } from './lib/utils'
 import List, { IListItem } from './lib/list'
 
 export default {
@@ -104,15 +104,12 @@ class Fat {
   _getMoveFn(x: number, y: number, duration: number) {
     const xGap = Number(16 * x / duration)
     const yGap = Number(16 * y / duration)
-    const endX = this._transAttr.x + x;
-    const endY = this._transAttr.y + y;
     return () => {
       const _x = Number((this._transAttr.x + xGap).toFixed(2))
       const _y = Number((this._transAttr.y + yGap).toFixed(2))
       this._transAttr.x = _x
       this._transAttr.y = _y;
       logger.debug('move:', this._transAttr.x, this._transAttr.y);
-      return _x >= endX && _y >= endY
     }
   }
 
@@ -127,6 +124,7 @@ class Fat {
   }
   play () {
     const len = this._steps.length
+    const _transAttr = deepClone(this._transAttr)
     for(let i = 0; i < len; i++) {
       const stepItem = this._steps.get(i)
       const stepFuncs = stepItem.value
@@ -136,8 +134,10 @@ class Fat {
         switch(fnInfo.method) {
           case FAT_METHOD_ENUM.move:
             const [x, y] = fnInfo.args
+            // _transAttr.x += x;
+            // _transAttr.y += y;
             const taskFn = this._getMoveFn(x, y, duration)
-            this._task.registTask(stepId, taskFn)
+            this._task.registTask(stepId, taskFn, duration)
             break; 
         }
       });
