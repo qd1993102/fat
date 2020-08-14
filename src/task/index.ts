@@ -5,7 +5,7 @@ import List, { IListItem } from '../lib/list'
 enum TASK_STATE_ENUM {
   pending = 0,
   ready = 1,
-  running = 2,
+  playing = 2,
   pause = 3,
   stop = 4
 }
@@ -53,46 +53,48 @@ export class Task {
       })
     }
   }
-  start() {
-    this._state = TASK_STATE_ENUM.running
-    this.run()
+  play() {
+    this._state = TASK_STATE_ENUM.playing
+    this._runTaskQueue()
   }
-  run () {
-    requestAnimationFrame(this.runTaskQueue)
+  pause () {
+    this._state = TASK_STATE_ENUM.pause
   }
-  runTaskQueue = () => {
-    const _taskQueueLen = this._taskQueue.length
-    const taskQueueItem = this._currentTaskQueue
-    const taskFuncList = taskQueueItem.value.taskFuncList
-    const len = taskFuncList.length
-    let taskFuncListState = Number(`0x${'0'.repeat(len)}`)  
-    taskFuncListState |= this.runTaskFuncList(taskFuncList);
-    // 比如长度为8的步骤，状态达成 0x11111111，说明当前步骤的所有方法全部执行完成
-    if (taskFuncListState === Number(`0x${'1'.repeat(len)}`)) { 
-      // 执行结束
-      taskQueueItem.value.state = TASK_STATE_ENUM.stop // 记录状态
-      if (this._currentTaskQueueIndex >= (_taskQueueLen - 1)) {
-        // taskQueue已经执行完毕，task完成
-        this._state = TASK_STATE_ENUM.stop
-        // cancelAnimationFrame(animId)
-        // todo 发出end事件
+  private _runTaskQueue () {
+    requestAnimationFrame(() => {
+      const _taskQueueLen = this._taskQueue.length
+      const taskQueueItem = this._currentTaskQueue
+      const taskFuncList = taskQueueItem.value.taskFuncList
+      const len = taskFuncList.length
+      let taskFuncListState = Number(`0x${'0'.repeat(len)}`)  
+      taskFuncListState |= this._runTaskFuncList(taskFuncList);
+      // 比如长度为8的步骤，状态达成 0x11111111，说明当前步骤的所有方法全部执行完成
+      if (taskFuncListState === Number(`0x${'1'.repeat(len)}`)) { 
+        // 执行结束
+        taskQueueItem.value.state = TASK_STATE_ENUM.stop // 记录状态
+        if (this._currentTaskQueueIndex >= (_taskQueueLen - 1)) {
+          // taskQueue已经执行完毕，task完成
+          this._state = TASK_STATE_ENUM.stop
+          // cancelAnimationFrame(animId)
+          // todo 发出end事件
+        } else {
+          // 更改游标状态，继续下一个taskQueueItem
+          this._currentTaskQueueIndex++;
+          this._runTaskQueue()
+        }
       } else {
-        // 更改游标状态，继续下一个taskQueueItem
-        this._currentTaskQueueIndex++;
-        this.run()
+        // 还在执行
+        taskQueueItem.value.state = TASK_STATE_ENUM.playing
+        this._runTaskQueue()
       }
-    } else {
-      // 还在执行
-      taskQueueItem.value.state = TASK_STATE_ENUM.running
-      this.run()
-    }
+    })
   }
-  runTaskFuncList(taskFuncList: ITaskQueueItemValueFunc[]): number {
+  private _runTaskFuncList(taskFuncList: ITaskQueueItemValueFunc[]): number {
     const len = taskFuncList.length
     let taskFuncListState = Number(`0x${'0'.repeat(len)}`)
     taskFuncList.forEach((taskFuncItem, index) => {
       const state = taskFuncItem.state
-      if (state === TASK_STATE_ENUM.ready || state === TASK_STATE_ENUM.running) {
+      if (state === TASK_STATE_ENUM.ready || state === TASK_STATE_ENUM.playing) {
         const res = taskFuncItem.func()
         if (res) {
           // 执行结束
@@ -102,12 +104,5 @@ export class Task {
       }
     })
     return taskFuncListState
-  }
-  pause () {
-    this._state = TASK_STATE_ENUM.pause
-  }
-
-  stop () {
-    this._state = TASK_STATE_ENUM.stop
   }
 }
