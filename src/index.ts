@@ -124,7 +124,6 @@ class Fat {
   }
   play () {
     const len = this._steps.length
-    const _transAttr = deepClone(this._transAttr)
     for(let i = 0; i < len; i++) {
       const stepItem = this._steps.get(i)
       const stepFuncs = stepItem.value
@@ -134,8 +133,6 @@ class Fat {
         switch(fnInfo.method) {
           case FAT_METHOD_ENUM.move:
             const [x, y] = fnInfo.args
-            // _transAttr.x += x;
-            // _transAttr.y += y;
             const taskFn = this._getMoveFn(x, y, duration)
             this._task.registTask(stepId, taskFn, duration)
             break; 

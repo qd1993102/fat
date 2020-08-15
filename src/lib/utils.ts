@@ -1,4 +1,4 @@
-import { IJsonObject } from "../@interface/common.i";
+import { IJsonObject, TFunc } from "../@interface/common.i";
 
 export function guid() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -9,4 +9,8 @@ export function guid() {
 
 export function deepClone<T extends IJsonObject>(obj: T): T {
   return JSON.parse(JSON.stringify(obj))
+}
+
+export function nextTick(func: TFunc) {
+  setTimeout(func, 0)
 }

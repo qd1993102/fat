@@ -2,6 +2,7 @@ import { IJsonObject } from '../@interface/common.i'
 import { requestAnimationFrame, cancelAnimationFrame } from '../lib/raf'
 import List, { IListItem } from '../lib/list'
 import logger from 'src/lib/logger'
+import timeMachine from '../time-machine'
 
 enum TASK_STATE_ENUM {
   pending = 0,
