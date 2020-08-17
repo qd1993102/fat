@@ -2,8 +2,9 @@
 // import utils from 'src/lib/utils';
 // import { Move } from './action/move'
 import { _$ } from './lib/dom'
-import { Task } from './task/index'
+import { Task, ItaskFuncParams } from './task/index'
 import { IJsonObject } from './@interface/common.i'
+import { moveEffect, IEffectCAttr } from './effect/index'
 import logger from './lib/logger'
 import { guid, deepClone } from './lib/utils'
 import List, { IListItem } from './lib/list'
@@ -31,12 +32,6 @@ interface IFatOptions {
   ctx?: Fat
   el: HTMLElement
 }
-interface ITransAttr {
-  x?: number
-  y?: number
-  z?: number
-  opacity?: number
-}
 interface IStepItemValue {
   method: string
   args: any[]
@@ -52,20 +47,20 @@ class Fat {
   private _steps: List<IStepItem> // 步骤列表
   private _stepDurations: IJsonObject // 每个步骤里的时间列表
   
-  private _$transAttr: ITransAttr = {
+  private _$effectAttr: IEffectCAttr = {
     x: 0,
     y: 0,
     z: 0,
     opacity: 1
   }
 
-  private _transAttr = new Proxy(this._$transAttr, {
+  private _effectAttr = new Proxy(this._$effectAttr, {
     get: (obj, prop, value) => {
-      return this._$transAttr[prop as keyof ITransAttr]
+      return this._$effectAttr[prop as keyof IEffectCAttr]
     },
     set: (obj, prop, value) => {
-      this._$transAttr[prop as keyof ITransAttr] = value
-      const attr = this._$transAttr
+      this._$effectAttr[prop as keyof IEffectCAttr] = value
+      const attr = this._$effectAttr
       const transform = `translate3d(${attr.x.toFixed(2) || 0}px, ${attr.y.toFixed(2) || 0}px, ${attr.z.toFixed(2) || 0}px)`;
       this._el.style.transform = transform;
       this._el.style.opacity = String(attr.opacity || 1);
@@ -79,7 +74,7 @@ class Fat {
     this._fatState = FAT_STATE_ENUM.ready
     this._steps = new List([])
     this._stepDurations = {}
-    this._currentStepId = this._genStepId()
+    this._currentStepId = guid()
   }
 
   move (x: number, y: number) {
@@ -101,17 +96,6 @@ class Fat {
     }
     return this
   }
-  _getMoveFn(x: number, y: number, duration: number) {
-    const xGap = Number(16 * x / duration)
-    const yGap = Number(16 * y / duration)
-    return () => {
-      const _x = Number((this._transAttr.x + xGap).toFixed(2))
-      const _y = Number((this._transAttr.y + yGap).toFixed(2))
-      this._transAttr.x = _x
-      this._transAttr.y = _y;
-      logger.debug('move:', this._transAttr.x, this._transAttr.y);
-    }
-  }
 
   duration (duration: number) {
     this._stepDurations[this._currentStepId] = duration
@@ -119,7 +103,7 @@ class Fat {
   }
   then() {
     // 更改
-    this._currentStepId = this._genStepId()
+    this._currentStepId = guid()
     return this
   }
   play () {
@@ -133,7 +117,14 @@ class Fat {
         switch(fnInfo.method) {
           case FAT_METHOD_ENUM.move:
             const [x, y] = fnInfo.args
-            const taskFn = this._getMoveFn(x, y, duration)
+            const taskFn = (params: ItaskFuncParams) => {
+              const effectRes = moveEffect({
+                x, 
+                y,
+              }, params.percent)
+              this._effectAttr.x += effectRes.x
+              this._effectAttr.y += effectRes.y
+            }
             this._task.registTask(stepId, taskFn, duration)
             break; 
         }
@@ -141,8 +132,5 @@ class Fat {
     }
     this._task.play()
     return this
-  }
-  private _genStepId() {
-    return guid();
   }
 }

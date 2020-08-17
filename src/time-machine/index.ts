@@ -4,7 +4,7 @@ import { TFunc } from '../@interface/common.i'
 interface ITimeMachineOpts {
   loop?: boolean
   duration: number
-  delay: number
+  delay?: number
 }
 interface ITimeMachineFuncItem {
   func: TFunc
@@ -14,7 +14,7 @@ interface ITimeMachineFuncItem {
   execTime: number
 }
 interface ITimeMachineFuncParam {
-  perc: number
+  percent: number
 }
 type ITimeMachineFunc = (params: ITimeMachineFuncParam) => any
 enum TIME_MACHINE_STATE {
@@ -61,7 +61,7 @@ class TimeMachine {
         if (newExecTime <= funcItem.duration || funcItem.loop) {
           const func = funcItem.func
           func({
-            perc: newExecTime % funcItem.duration / funcItem.duration
+            percent: newExecTime % funcItem.duration / funcItem.duration
           })
           funcItem.execTime = newExecTime % funcItem.duration
           return true;          
@@ -71,8 +71,8 @@ class TimeMachine {
       })
       if (this._funcList.length === 0) {
         // 已经执行完毕
-        this._batchTriggerCompleteHandle()
         this.reset()
+        this._batchTriggerCompleteHandle()
       } else {
         this._actuator(nowTime, newExecTime)
       }

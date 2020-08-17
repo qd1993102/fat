@@ -1,6 +1,4 @@
-import { IJsonObject } from '../@interface/common.i'
-import { requestAnimationFrame, cancelAnimationFrame } from '../lib/raf'
-import List, { IListItem } from '../lib/list'
+import List from '../lib/list'
 import logger from 'src/lib/logger'
 import timeMachine from '../time-machine'
 
@@ -20,14 +18,14 @@ interface ITaskQueueItemValueFunc {
   func: TTaskFunc
   state: TASK_STATE_ENUM
 }
-interface ItaskParams {
+export interface ItaskFuncParams {
   percent: number
 }
 export interface ITaskQueueItem {
   id: string,
   value: ITaskQueueItemValue
 }
-export type TTaskFunc = (taskParams?: ItaskParams) => any
+export type TTaskFunc = (taskParams?: ItaskFuncParams) => any
 export class Task {
   private _state: TASK_STATE_ENUM
   private _taskQueue: List<ITaskQueueItem>
@@ -41,7 +39,7 @@ export class Task {
     this._currentTaskQueueIndex = 0
   }
 
-  registTask (taskId: string, taskFunc: TTaskFunc, duration: number) {
+  registTask (taskId: string, taskFunc: TTaskFunc, duration: number): void {
     const _taskQueueItem = this._taskQueue.getById(taskId)
     const taskItemValueFunc = {
       func: taskFunc,
@@ -60,61 +58,35 @@ export class Task {
       })
     }
   }
-  play() {
+  play(): void {
     this._state = TASK_STATE_ENUM.playing
     this._runTaskQueue()
   }
-  pause () {
+  pause(): void {
     this._state = TASK_STATE_ENUM.pause
   }
-  private _runTaskQueue (execTime = 0, lastTime = Date.now()) {
-    requestAnimationFrame(() => {
-      const nowTime = Date.now()
-      const timeGap = nowTime - lastTime
-      const _taskQueueLen = this._taskQueue.length
-      const taskQueueItem = this._currentTaskQueue
-      const taskFuncList = taskQueueItem.value.taskFuncList
-      const duration = taskQueueItem.value.duration
-      const len = taskFuncList.length
-      let taskFuncListState = Number(`0x${'0'.repeat(len)}`)  
-      taskFuncListState |= this._runTaskFuncList(taskFuncList, execTime, duration);
-      // 比如长度为8的步骤，状态达成 0x11111111，说明当前步骤的所有方法全部执行完成
-      if (taskFuncListState === Number(`0x${'1'.repeat(len)}`)) { 
-        // 执行结束
-        taskQueueItem.value.state = TASK_STATE_ENUM.stop // 记录状态
-        if (this._currentTaskQueueIndex >= (_taskQueueLen - 1)) {
-          // taskQueue已经执行完毕，task完成
-          this._state = TASK_STATE_ENUM.stop
-          // cancelAnimationFrame(animId)
-          // todo 发出end事件
-        } else {
-          // 更改游标状态，继续下一个taskQueueItem
-          this._currentTaskQueueIndex++;
-          // execTime = 0;
-          this._runTaskQueue()
-        }
-      } else {
-        // 还在执行
-        taskQueueItem.value.state = TASK_STATE_ENUM.playing
-        this._runTaskQueue(execTime + timeGap, nowTime)
+  private _runTaskQueue () {
+    const _taskQueueLen = this._taskQueue.length
+    const taskQueueItem = this._currentTaskQueue
+    const taskFuncList = taskQueueItem.value.taskFuncList
+    const duration = taskQueueItem.value.duration
+    taskQueueItem.value.state = TASK_STATE_ENUM.playing
+    taskFuncList.forEach(taskFuncItem => {
+      timeMachine.exec((params) => {
+        taskFuncItem.func({
+          percent: params.percent
+        })
+        taskFuncItem.state = TASK_STATE_ENUM.playing
+      }, {
+        duration,
+      })
+    })
+    timeMachine.onComplete(() => {
+      taskQueueItem.value.state = TASK_STATE_ENUM.stop
+      if (this._currentTaskQueueIndex < _taskQueueLen - 1) {
+        this._currentTaskQueueIndex++
+        this._runTaskQueue()  
       }
     })
-  }
-  private _runTaskFuncList(taskFuncList: ITaskQueueItemValueFunc[], execTime: number, duration: number): number {
-    const len = taskFuncList.length
-    let taskFuncListState = Number(`0x${'0'.repeat(len)}`)
-    const perc = execTime / duration; // 进度
-    taskFuncList.forEach((taskFuncItem, index) => {
-      const state = taskFuncItem.state
-      if (state === TASK_STATE_ENUM.ready || state === TASK_STATE_ENUM.playing) {
-        taskFuncItem.func()
-        if (perc >= 1) {
-          // 执行结束
-          taskFuncItem.state = TASK_STATE_ENUM.stop
-          taskFuncListState |= Number('0x' + 1 + '0'.repeat(index))
-        }
-      }
-    })
-    return taskFuncListState
   }
 }
