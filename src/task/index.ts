@@ -12,6 +12,7 @@ enum TASK_STATE_ENUM {
 interface ITaskQueueItemValue {
   state: TASK_STATE_ENUM
   duration: number
+  delay: number
   taskFuncList: ITaskQueueItemValueFunc[]
 }
 interface ITaskQueueItemValueFunc {
@@ -20,6 +21,7 @@ interface ITaskQueueItemValueFunc {
 }
 export interface ItaskFuncParams {
   percent: number
+  duration: number
 }
 export interface ITaskQueueItem {
   id: string,
@@ -39,7 +41,7 @@ export class Task {
     this._currentTaskQueueIndex = 0
   }
 
-  registTask (taskId: string, taskFunc: TTaskFunc, duration: number): void {
+  registTask (taskId: string, taskFunc: TTaskFunc, duration: number, delay: number): void {
     const _taskQueueItem = this._taskQueue.getById(taskId)
     const taskItemValueFunc = {
       func: taskFunc,
@@ -53,6 +55,7 @@ export class Task {
         value: {
           state: TASK_STATE_ENUM.ready,
           duration,
+          delay,
           taskFuncList: [taskItemValueFunc]
         }
       })
@@ -70,15 +73,18 @@ export class Task {
     const taskQueueItem = this._currentTaskQueue
     const taskFuncList = taskQueueItem.value.taskFuncList
     const duration = taskQueueItem.value.duration
+    const delay = taskQueueItem.value.delay
     taskQueueItem.value.state = TASK_STATE_ENUM.playing
     taskFuncList.forEach(taskFuncItem => {
       timeMachine.exec((params) => {
         taskFuncItem.func({
-          percent: params.percent
+          percent: params.percent,
+          duration: params.duration
         })
         taskFuncItem.state = TASK_STATE_ENUM.playing
       }, {
         duration,
+        delay
       })
     })
     timeMachine.onComplete(() => {

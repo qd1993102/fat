@@ -4,7 +4,7 @@
 import { _$ } from './lib/dom'
 import { Task, ItaskFuncParams } from './task/index'
 import { IJsonObject } from './@interface/common.i'
-import { moveEffect, IEffectCAttr } from './effect/index'
+import { moveEffect, scaleEffect, IEffectAttr } from './effect/index'
 import logger from './lib/logger'
 import { guid, deepClone } from './lib/utils'
 import List, { IListItem } from './lib/list'
@@ -27,6 +27,7 @@ enum FAT_STATE_ENUM {
 
 enum FAT_METHOD_ENUM {
   move = 'move',
+  scale = 'scale'
 }
 interface IFatOptions {
   ctx?: Fat
@@ -35,6 +36,8 @@ interface IFatOptions {
 interface IStepItemValue {
   method: string
   args: any[]
+  startEffectAttr: IEffectAttr
+  endEffectAttr: IEffectAttr
 }
 interface IStepItem {
   value: IStepItemValue[]
@@ -46,22 +49,30 @@ class Fat {
   private _currentStepId: string // 当前步骤
   private _steps: List<IStepItem> // 步骤列表
   private _stepDurations: IJsonObject // 每个步骤里的时间列表
-  
-  private _$effectAttr: IEffectCAttr = {
+  private _stepDelayTimes: IJsonObject // 每个步骤里的延迟时间
+  private _$effectAttr: IEffectAttr = {
     x: 0,
     y: 0,
     z: 0,
+    scale: 1,
+    opacity: 1
+  }
+  private _endEffectAttr: IEffectAttr = {
+    x: 0,
+    y: 0,
+    z: 0,
+    scale: 1,
     opacity: 1
   }
 
   private _effectAttr = new Proxy(this._$effectAttr, {
     get: (obj, prop, value) => {
-      return this._$effectAttr[prop as keyof IEffectCAttr]
+      return this._$effectAttr[prop as keyof IEffectAttr]
     },
     set: (obj, prop, value) => {
-      this._$effectAttr[prop as keyof IEffectCAttr] = value
+      this._$effectAttr[prop as keyof IEffectAttr] = value
       const attr = this._$effectAttr
-      const transform = `translate3d(${attr.x.toFixed(2) || 0}px, ${attr.y.toFixed(2) || 0}px, ${attr.z.toFixed(2) || 0}px)`;
+      const transform = `translate3d(${attr.x.toFixed(2) || 0}px, ${attr.y.toFixed(2) || 0}px, ${attr.z.toFixed(2) || 0}px) scale(${attr.scale})`;
       this._el.style.transform = transform;
       this._el.style.opacity = String(attr.opacity || 1);
       return true
@@ -74,31 +85,34 @@ class Fat {
     this._fatState = FAT_STATE_ENUM.ready
     this._steps = new List([])
     this._stepDurations = {}
+    this._stepDelayTimes = {}
     this._currentStepId = guid()
   }
 
   move (x: number, y: number) {
-    if (this._fatState !== FAT_STATE_ENUM.playing) {
-      const stepItem = this._steps.getById(this._currentStepId)
-      const stepItemValue = {
-        method: FAT_METHOD_ENUM.move,
-        args: [x, y]
-      };
-      if (!stepItem) {
-        this._steps.push({
-          id: this._currentStepId,
-          value: [stepItemValue]
-        })
-      } else {
-        stepItem.value.push(stepItemValue);
-      }
-      return this
-    }
-    return this
+    return this._genEffectFunc(FAT_METHOD_ENUM.move, {
+      ...this._endEffectAttr
+    }, {
+      x: this._endEffectAttr.x += x,
+      y: this._endEffectAttr.y += y,
+      ...this._endEffectAttr
+    }, [x, y])
+  }
+  scale(scale: number) {
+    return this._genEffectFunc(FAT_METHOD_ENUM.scale, {
+      ...this._endEffectAttr
+    }, {
+      scale: (this._endEffectAttr.scale = scale),
+      ...this._endEffectAttr
+    }, [scale])
   }
 
   duration (duration: number) {
     this._stepDurations[this._currentStepId] = duration
+    return this
+  }
+  delay(delayTime: number) {
+    this._stepDelayTimes[this._currentStepId] = delayTime
     return this
   }
   then() {
@@ -113,24 +127,51 @@ class Fat {
       const stepFuncs = stepItem.value
       const stepId = stepItem.id
       const duration = this._stepDurations[stepId] // 读取对应步骤下的duration
+      const delay = this._stepDelayTimes[stepId]
       stepFuncs.forEach((fnInfo) => {
         switch(fnInfo.method) {
+          // 移动
           case FAT_METHOD_ENUM.move:
-            const [x, y] = fnInfo.args
-            const taskFn = (params: ItaskFuncParams) => {
-              const effectRes = moveEffect({
-                x, 
-                y,
-              }, params.percent)
-              this._effectAttr.x += effectRes.x
-              this._effectAttr.y += effectRes.y
-            }
-            this._task.registTask(stepId, taskFn, duration)
+            const [x, y] = fnInfo.args // 要变化的x、y差值
+            const moveGapEffect = moveEffect(fnInfo.startEffectAttr, fnInfo.endEffectAttr, duration)
+            this._task.registTask(stepId, (params: ItaskFuncParams) => {
+              // this._compositeEffect(moveGapEffect)
+              moveGapEffect(this._effectAttr)
+            }, duration, delay)
+            break;
+          case FAT_METHOD_ENUM.scale:
+            // 缩放
+            const [scale = 1] = fnInfo.args // 要变化的差值
+            const scaleGapEffect = scaleEffect(fnInfo.startEffectAttr, fnInfo.endEffectAttr, duration)
+            this._task.registTask(stepId, (params: ItaskFuncParams) => {
+              scaleGapEffect(this._effectAttr)
+            }, duration, delay)
             break; 
         }
       });
     }
     this._task.play()
+    return this
+  }
+  private _genEffectFunc(method: FAT_METHOD_ENUM, startEffectAttr: IEffectAttr, endEffectAttr: IEffectAttr, args: any[]) {
+    if (this._fatState !== FAT_STATE_ENUM.playing) {
+      const stepItem = this._steps.getById(this._currentStepId)
+      const stepItemValue = {
+        method: method,
+        args,
+        startEffectAttr,
+        endEffectAttr
+      };
+      if (!stepItem) {
+        this._steps.push({
+          id: this._currentStepId,
+          value: [stepItemValue]
+        })
+      } else {
+        stepItem.value.push(stepItemValue);
+      }
+      return this
+    }
     return this
   }
 }

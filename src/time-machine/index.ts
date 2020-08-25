@@ -14,6 +14,7 @@ interface ITimeMachineFuncItem {
   execTime: number
 }
 interface ITimeMachineFuncParam {
+  duration: number
   percent: number
 }
 type ITimeMachineFunc = (params: ITimeMachineFuncParam) => any
@@ -56,14 +57,19 @@ class TimeMachine {
     requestAnimationFrame(() => {
       const nowTime = Date.now()
       const timeGap = nowTime - lastTime
-      const newExecTime = execTime + timeGap
+      const newExecTime = execTime + timeGap // 包含delay的执行时间
       this._funcList = this._funcList.filter(funcItem => {
-        if (newExecTime <= funcItem.duration || funcItem.loop) {
+        const { duration, delay, loop } = funcItem
+        if (newExecTime <= (duration + delay) || loop) {
+          // 如果还没执行完成
           const func = funcItem.func
-          func({
-            percent: newExecTime % funcItem.duration / funcItem.duration
-          })
-          funcItem.execTime = newExecTime % funcItem.duration
+          if (newExecTime > delay) {
+            func({
+              percent: (newExecTime - delay) % funcItem.duration / funcItem.duration,
+              duration: funcItem.duration
+            })              
+          }
+          funcItem.execTime = (newExecTime - delay) % funcItem.duration
           return true;          
         } else {
           return false
