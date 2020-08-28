@@ -1,6 +1,8 @@
 import { requestAnimationFrame, cancelAnimationFrame } from '../lib/raf'
 import { nextTick } from '../lib/utils'
 import { TFunc } from '../@interface/common.i'
+import calc from '../lib/caculate'
+import logger from 'src/lib/logger'
 interface ITimeMachineOpts {
   loop?: boolean
   duration: number
@@ -12,6 +14,7 @@ interface ITimeMachineFuncItem {
   delay: number
   loop: boolean
   execTime: number
+  percent: number
 }
 interface ITimeMachineFuncParam {
   duration: number
@@ -37,7 +40,8 @@ class TimeMachine {
       duration,
       delay,
       loop,
-      execTime: 0
+      execTime: 0,
+      percent: 0
     })
     if (this._state === TIME_MACHINE_STATE.start) {
       return
@@ -59,17 +63,21 @@ class TimeMachine {
       const timeGap = nowTime - lastTime
       const newExecTime = execTime + timeGap // 包含delay的执行时间
       this._funcList = this._funcList.filter(funcItem => {
-        const { duration, delay, loop } = funcItem
-        if (newExecTime <= (duration + delay) || loop) {
-          // 如果还没执行完成
+        const { duration, delay, loop, percent } = funcItem
+        if (newExecTime <= (duration + delay) || percent < 1 || loop) {
+        // if (percent < 1 || loop) {
+            // 如果还没执行完成
           const func = funcItem.func
           if (newExecTime > delay) {
+            const trulyExecTime = (newExecTime - delay) // 除去delay时间，真正的执行时间
+            const percent = Math.min(calc.divide(trulyExecTime, funcItem.duration), 1)
             func({
-              percent: (newExecTime - delay) % funcItem.duration / funcItem.duration,
+              percent,
               duration: funcItem.duration
             })              
+            funcItem.percent = percent
+            funcItem.execTime = trulyExecTime
           }
-          funcItem.execTime = (newExecTime - delay) % funcItem.duration
           return true;          
         } else {
           return false

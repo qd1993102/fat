@@ -8,9 +8,9 @@ export function guid() {
 }
 
 export function deepClone<T extends IJsonObject>(obj: T): T {
-  return JSON.parse(JSON.stringify(obj))
+  return JSON.parse(JSON.stringify(obj)) // todo
 }
 
 export function nextTick(func: TFunc) {
-  setTimeout(func, 0)
+  setTimeout(func, 0) // todo
 }

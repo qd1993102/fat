@@ -4,14 +4,13 @@
 import { _$ } from './lib/dom'
 import { Task, ItaskFuncParams } from './task/index'
 import { IJsonObject } from './@interface/common.i'
-import { moveEffect, scaleEffect, IEffectAttr } from './effect/index'
+import { moveEffect, scaleEffect, rotateEffect, opacityEffect, IEffectAttr, TEffectFunc } from './effect/index'
 import logger from './lib/logger'
 import { guid, deepClone } from './lib/utils'
 import List, { IListItem } from './lib/list'
 
 export default {
-  select <K extends keyof HTMLElementTagNameMap> (selector: K) {
-    const el = _$(selector)
+  select(el: HTMLElement) {
     return new Fat({
       el
     })
@@ -27,7 +26,9 @@ enum FAT_STATE_ENUM {
 
 enum FAT_METHOD_ENUM {
   move = 'move',
-  scale = 'scale'
+  scale = 'scale',
+  rotate = 'rotate',
+  opacity = 'opacity',
 }
 interface IFatOptions {
   ctx?: Fat
@@ -55,6 +56,7 @@ class Fat {
     y: 0,
     z: 0,
     scale: 1,
+    rotate: 0,
     opacity: 1
   }
   private _endEffectAttr: IEffectAttr = {
@@ -62,6 +64,7 @@ class Fat {
     y: 0,
     z: 0,
     scale: 1,
+    rotate: 0,
     opacity: 1
   }
 
@@ -72,9 +75,13 @@ class Fat {
     set: (obj, prop, value) => {
       this._$effectAttr[prop as keyof IEffectAttr] = value
       const attr = this._$effectAttr
-      const transform = `translate3d(${attr.x.toFixed(2) || 0}px, ${attr.y.toFixed(2) || 0}px, ${attr.z.toFixed(2) || 0}px) scale(${attr.scale})`;
+      const transform = `translate3d(${attr.x.toFixed(2) || 0}px, ${attr.y.toFixed(2) || 0}px, ${attr.z.toFixed(2) || 0}px) scale(${attr.scale}) rotate(${attr.rotate}deg)`;
       this._el.style.transform = transform;
-      this._el.style.opacity = String(attr.opacity || 1);
+      if (attr.opacity === undefined) {
+        this._el.style.opacity = '0';
+      } else {
+        this._el.style.opacity = String(attr.opacity);
+      }
       return true
     }
   })
@@ -96,7 +103,7 @@ class Fat {
       x: this._endEffectAttr.x += x,
       y: this._endEffectAttr.y += y,
       ...this._endEffectAttr
-    }, [x, y])
+    })
   }
   scale(scale: number) {
     return this._genEffectFunc(FAT_METHOD_ENUM.scale, {
@@ -104,7 +111,23 @@ class Fat {
     }, {
       scale: (this._endEffectAttr.scale = scale),
       ...this._endEffectAttr
-    }, [scale])
+    })
+  }
+  rotate(rotate: number) {
+    return this._genEffectFunc(FAT_METHOD_ENUM.rotate, {
+      ...this._endEffectAttr
+    }, {
+      rotate: (this._endEffectAttr.rotate = rotate),
+      ...this._endEffectAttr
+    })
+  }
+  opacity(opacity: number) {
+    return this._genEffectFunc(FAT_METHOD_ENUM.opacity, {
+      ...this._endEffectAttr
+    }, {
+      opacity: (this._endEffectAttr.opacity = opacity),
+      ...this._endEffectAttr
+    })
   }
 
   duration (duration: number) {
@@ -129,31 +152,35 @@ class Fat {
       const duration = this._stepDurations[stepId] // 读取对应步骤下的duration
       const delay = this._stepDelayTimes[stepId]
       stepFuncs.forEach((fnInfo) => {
+        let effectFunc: TEffectFunc | null = null
         switch(fnInfo.method) {
-          // 移动
           case FAT_METHOD_ENUM.move:
-            const [x, y] = fnInfo.args // 要变化的x、y差值
-            const moveGapEffect = moveEffect(fnInfo.startEffectAttr, fnInfo.endEffectAttr, duration)
-            this._task.registTask(stepId, (params: ItaskFuncParams) => {
-              // this._compositeEffect(moveGapEffect)
-              moveGapEffect(this._effectAttr)
-            }, duration, delay)
-            break;
+            // 移动
+            effectFunc = moveEffect(fnInfo.startEffectAttr, fnInfo.endEffectAttr)
+            break
           case FAT_METHOD_ENUM.scale:
             // 缩放
-            const [scale = 1] = fnInfo.args // 要变化的差值
-            const scaleGapEffect = scaleEffect(fnInfo.startEffectAttr, fnInfo.endEffectAttr, duration)
-            this._task.registTask(stepId, (params: ItaskFuncParams) => {
-              scaleGapEffect(this._effectAttr)
-            }, duration, delay)
-            break; 
+            effectFunc = scaleEffect(fnInfo.startEffectAttr, fnInfo.endEffectAttr)
+            break
+          case FAT_METHOD_ENUM.rotate:
+            // 旋转
+            effectFunc = rotateEffect(fnInfo.startEffectAttr, fnInfo.endEffectAttr)
+            break
+          case FAT_METHOD_ENUM.opacity:
+            // 透明度
+            effectFunc = opacityEffect(fnInfo.startEffectAttr, fnInfo.endEffectAttr)
+            break
+        }
+        if (effectFunc !== null) {
+          // 执行效果函数
+          this._task.registTask(stepId, (taskParams: ItaskFuncParams) => effectFunc(this._effectAttr, taskParams), duration, delay)
         }
       });
     }
     this._task.play()
     return this
   }
-  private _genEffectFunc(method: FAT_METHOD_ENUM, startEffectAttr: IEffectAttr, endEffectAttr: IEffectAttr, args: any[]) {
+  private _genEffectFunc(method: FAT_METHOD_ENUM, startEffectAttr: IEffectAttr, endEffectAttr: IEffectAttr, args?: any[]) {
     if (this._fatState !== FAT_STATE_ENUM.playing) {
       const stepItem = this._steps.getById(this._currentStepId)
       const stepItemValue = {
